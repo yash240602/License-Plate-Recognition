@@ -62,6 +62,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULT_FOLDER'] = RESULT_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
+# Ensure upload and result directories exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(RESULT_FOLDER, exist_ok=True)
+
 # History storage
 HISTORY_FILE = 'processing_history.json'
 FEEDBACK_FILE = 'recognition_feedback.json'
@@ -289,28 +293,29 @@ def correct_text():
         logger.error("Correction request has no JSON data")
         return jsonify({'success': False, 'error': 'Invalid request format'}), 400
 
-    image_path = data.get('image_path') # Path of the *processed* image shown to user
+    image_path = data.get('image_path') # Keep for logging/context if needed
     original_text = data.get('original_text')
     corrected_text = data.get('corrected_text')
     was_correct = data.get('was_correct', False)
 
-    if not image_path or original_text is None or (not was_correct and not corrected_text):
-        logger.error(f"Missing data in correction request: {data}")
-        return jsonify({'success': False, 'error': 'Missing data'}), 400
+    if original_text is None or (not was_correct and corrected_text is None):
+        logger.error(f"Missing text data in correction request: {data}")
+        return jsonify({'success': False, 'error': 'Missing text data'}), 400
 
-    # Use the improved feedback handler
+    # Call feedback handler WITHOUT image_path
     success = handle_edit_text_feedback(
-        image_path=image_path, # Consider linking feedback to original image if possible
         original_text=original_text,
         corrected_text=corrected_text if not was_correct else original_text,
         was_correct=was_correct
     )
 
     if success:
-        logger.info(f"Feedback processed successfully for image related to: {image_path}")
+        log_context = f"image related to: {image_path}" if image_path else "feedback submission"
+        logger.info(f"Feedback processed successfully for {log_context}")
         return jsonify({'success': True})
     else:
-        logger.error(f"Failed to save feedback for image related to: {image_path}")
+        log_context = f"image related to: {image_path}" if image_path else "feedback submission"
+        logger.error(f"Failed to save feedback for {log_context}")
         return jsonify({'success': False, 'error': 'Failed to save feedback'}), 500
 
 @app.route('/test')

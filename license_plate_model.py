@@ -14,12 +14,33 @@ import random
 import string
 import threading
 from pathlib import Path
+import Levenshtein # Ensure this import is at the top
 
 # Set Tesseract executable path explicitly
 pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
+
+# Define similarity_score at module level (outside any function)
+def similarity_score(s1, s2):
+    """
+    Calculates a similarity score between two strings based on Levenshtein distance.
+    Score ranges from 0 (completely different) to 1 (identical).
+    """
+    if not s1 and not s2:
+        return 1.0  # Both empty, considered identical
+    if not s1 or not s2:
+        return 0.0  # One is empty, completely different
+    
+    distance = Levenshtein.distance(s1, s2)
+    max_len = max(len(s1), len(s2))
+    
+    if max_len == 0:
+        return 1.0 # Should be covered by the first check, but safe fallback
+        
+    similarity = 1.0 - (distance / max_len)
+    return max(0.0, similarity) # Ensure score doesn't go below 0
 
 # --- Decorator Definitions ---
 def log_execution_time(func):
@@ -948,49 +969,111 @@ def apply_feedback_mechanism(original_text, user_input):
     
     return corrected_text
 
-def handle_edit_text_feedback(original_text, corrected_text, image_path=None, was_correct=False):
-    """
-    Special handler for the Edit Text button feedback.
-    This function should be called when the user edits the recognized text.
+@log_exceptions
+def handle_edit_text_feedback(original_text, corrected_text, was_correct=False):
+    """Handles feedback submission, updates feedback data, and logs."""
+    logger.info(f"Received feedback: Original='{original_text}', Corrected='{corrected_text}', WasCorrect={was_correct}")
+    feedback_data = load_feedback_data()
     
-    Args:
-        original_text: The originally recognized text
-        corrected_text: The user-provided corrected text
-        image_path: Path to the image that was processed
-        was_correct: Boolean indicating if the original recognition was correct
-        
-    Returns:
-        bool: Success status of the feedback handling
-    """
-    # Save feedback first
-    success = save_feedback_correction(original_text, corrected_text, image_path)
-    
-    # Apply specific corrections on common patterns
-    if original_text == "IBA-8695" and corrected_text != "TN 21 BC 6225":
-        print(f"Note: IBA-8695 is typically a misrecognition of TN 21 BC 6225. Saving both corrections.")
-        # Save the additional standard correction
-        save_feedback_correction(original_text, "TN 21 BC 6225", image_path)
-    
-    if original_text == "DEF456" and corrected_text != "CH01AN0001":
-        print(f"Note: DEF456 is typically a misrecognition of CH01AN0001. Saving both corrections.")
-        # Save the additional standard correction
-        save_feedback_correction(original_text, "CH01AN0001", image_path)
-    
-    # Update global confidence variable
-    global _LAST_RECOGNIZED_TEXT, _LAST_CONFIDENCE
-    _LAST_RECOGNIZED_TEXT = corrected_text
-    _LAST_CONFIDENCE = set_confidence_for_text(corrected_text)
-    
-    # Log the feedback event
+    # Define key for feedback storage
+    # Using original_text as key might be problematic if it varies slightly.
+    # Consider using a more stable identifier if available (e.g., image ID).
+    feedback_key = original_text # Or a better identifier
+
+    if feedback_key not in feedback_data:
+        feedback_data[feedback_key] = {'corrections': [], 'correct_confirmations': 0, 'incorrect_confirmations': 0}
+
+    entry = feedback_data[feedback_key]
+
     if was_correct:
+        entry['correct_confirmations'] = entry.get('correct_confirmations', 0) + 1
         logger.info(f"User confirmed correct recognition: '{original_text}'")
     else:
-        logger.info(f"Applied feedback mechanism: '{original_text}' → '{corrected_text}' (user provided: '{corrected_text}')")
-        logger.info(f"Added feedback: '{original_text}' → '{corrected_text}'")
-    
+        entry['incorrect_confirmations'] = entry.get('incorrect_confirmations', 0) + 1
+        # Only add correction if it's different from original
+        if corrected_text != original_text:
+            # Check if this correction already exists
+            found = False
+            for corr in entry['corrections']:
+                if corr['text'] == corrected_text:
+                    corr['count'] = corr.get('count', 1) + 1
+                    found = True
+                    break
+            if not found:
+                entry['corrections'].append({'text': corrected_text, 'count': 1})
+            logger.info(f"Added feedback: '{original_text}' → '{corrected_text}'")
+        else:
+             logger.info(f"User submitted identical text as correction for '{original_text}'. Not adding as distinct feedback.")
+
     logger.info(f"Text feedback recorded. Was correct: {was_correct}")
     
-    return True
+    try:
+        save_feedback_data(feedback_data)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving feedback: {e}")
+        return False
+
+@log_exceptions
+def apply_feedback_correction(text):
+    """Applies corrections based on stored feedback data."""
+    if not text: # Handle empty or None input
+        return text
+        
+    feedback_data = load_feedback_data()
+    if not feedback_data:
+        return text # No feedback data available
+
+    best_correction = text
+    highest_score = -1 # Use -1 to handle cases where no feedback exists for the text
+    
+    # Direct match check (most confident correction)
+    if text in feedback_data:
+        entry = feedback_data[text]
+        # Prioritize corrections with high counts and fewer incorrect confirmations
+        corrections = sorted(
+            entry.get('corrections', []),
+            key=lambda x: x.get('count', 0), 
+            reverse=True
+        )
+        
+        if corrections:
+            # Simple approach: Take the most frequent correction
+            # More sophisticated logic could consider confidence based on correct/incorrect confirmations
+            potential_correction = corrections[0]['text']
+            # Only apply if different and seems plausible (basic length check)
+            if potential_correction != text and len(potential_correction) > 3: 
+                best_correction = potential_correction
+                highest_score = 1.0 # Assign high confidence for direct match correction
+                logger.info(f"Applying direct feedback correction: '{text}' -> '{best_correction}'")
+                return best_correction # Return early for direct match
+
+    # If no direct match or no suitable correction, try similarity-based matching
+    # This is computationally more expensive
+    if highest_score < 0:
+        for original, entry in feedback_data.items():
+            score = similarity_score(text, original) # Use module-level function
+            
+            # Only consider corrections from similar original texts
+            if score > 0.7: # Similarity threshold (tune as needed)
+                 corrections = sorted(
+                    entry.get('corrections', []),
+                    key=lambda x: x.get('count', 0), 
+                    reverse=True
+                 )
+                 if corrections:
+                     potential_correction = corrections[0]['text']
+                     # If this potential correction is better than current best
+                     if score > highest_score and potential_correction != text and len(potential_correction) > 3:
+                         highest_score = score
+                         best_correction = potential_correction
+                         
+        if highest_score > 0.7: # Only apply if a sufficiently similar correction was found
+            logger.info(f"Applying similarity-based feedback correction: '{text}' -> '{best_correction}' (Similarity: {highest_score:.2f})")
+        else:
+            logger.debug(f"No suitable feedback correction found for '{text}'. Similarity threshold not met or no corrections available.")
+
+    return best_correction
 
 def detect_multiple_text_candidates(plate_img):
     """
@@ -1402,126 +1485,3 @@ def preprocess_low_resolution(image, min_height=50, min_width=50, target_size=(2
     else:
         # Image meets minimum resolution requirements
         return image 
-
-@log_exceptions
-def apply_feedback_correction(text):
-    """
-    Apply feedback-based correction to a recognized text.
-    Uses various feedback mechanisms (exact match, similarity, character level)
-    to improve accuracy based on stored feedback.
-
-    Args:
-        text (str): The recognized text that might need correction.
-
-    Returns:
-        str: The corrected text based on feedback history, or the original text if no
-             suitable correction is found.
-    """
-    if not text or not isinstance(text, str) or len(text) < 2:
-        # Don't process empty, invalid, or very short strings
-        return text
-
-    try:
-        # Load feedback data (uses caching)
-        feedback_data = load_feedback_data()
-        corrections = feedback_data.get("corrections", {})
-        successful_recognitions = feedback_data.get("successful_recognitions", {})
-        character_corrections = feedback_data.get("character_corrections", {})
-
-        # 1. Check if this exact text has been confirmed correct multiple times
-        success_count = successful_recognitions.get(text, 0)
-        if success_count >= 3:
-            logger.debug(f"Text '{text}' confirmed correct {success_count} times. Skipping correction.")
-            return text
-
-        # 2. Check for exact match corrections
-        if text in corrections:
-            correction_info = corrections[text]
-            counts = correction_info.get("counts", {})
-            total = correction_info.get("total", 0)
-
-            if counts and total > 0:
-                # Find the most frequent correction for this exact text
-                best_correction, frequency = max(counts.items(), key=lambda item: item[1])
-                correction_confidence = frequency / total
-
-                # Apply correction if confidence is high or frequency is sufficient
-                # (Thresholds can be tuned based on performance)
-                if frequency >= 3 or (total >= 5 and correction_confidence >= 0.75):
-                    logger.info(f"Applied exact feedback correction: {text} -> {best_correction} (Freq: {frequency}/{total}, Conf: {correction_confidence:.2f})")
-                    return best_correction
-
-        # 3. Check for corrections based on similarity (Jaccard similarity used here)
-        # This helps if the misrecognition is slightly different each time
-        similar_matches = []
-        # Define similarity_score here or ensure it's defined elsewhere in the file
-        def similarity_score(s1, s2):
-            if not s1 or not s2:
-                return 0.0
-            set1 = set(s1.lower())
-            set2 = set(s2.lower())
-            intersection = len(set1.intersection(set2))
-            union = len(set1.union(set2))
-            return intersection / union if union > 0 else 0.0
-
-        for original_text, correction_info in corrections.items():
-            if original_text == text: continue # Skip self
-
-            similarity = similarity_score(text, original_text)
-
-            # Consider corrections from highly similar original texts
-            if similarity >= 0.80: # Similarity threshold (tune as needed)
-                counts = correction_info.get("counts", {})
-                total = correction_info.get("total", 0)
-                if counts and total > 0:
-                    best_correction, frequency = max(counts.items(), key=lambda item: item[1])
-                    # Confidence combines similarity and correction frequency
-                    combined_confidence = similarity * (frequency / total)
-                    similar_matches.append((best_correction, combined_confidence, frequency))
-
-        # If similar matches found, use the best one based on frequency then confidence
-        if similar_matches:
-            similar_matches.sort(key=lambda x: (x[2], x[1]), reverse=True) # Sort by freq, then conf
-            best_match, confidence, frequency = similar_matches[0]
-
-            # Apply if frequency is high enough (more conservative for similar matches)
-            if frequency >= 3:
-                 logger.info(f"Applied similarity feedback correction: {text} -> {best_match} (Sim: {similarity:.2f}, Freq: {frequency}, Conf: {confidence:.2f})")
-                 return best_match
-
-        # 4. Apply character-level corrections (if available and reliable)
-        # This can fix common single-character OCR errors (e.g., O->0, S->5)
-        # Define apply_character_corrections here or ensure it's defined
-        def apply_character_corrections(current_text, char_corr_map):
-            if not char_corr_map: return current_text
-            corrected_list = list(current_text)
-            changed = False
-            for i, char in enumerate(current_text):
-                 # Check for reliable corrections (e.g., occurred >= 3 times)
-                 for pattern, count in char_corr_map.items():
-                     if count >= 3:
-                         try:
-                             source, target = pattern.split('->')
-                             if len(source) == 1 and len(target) == 1 and char.upper() == source.upper():
-                                 if corrected_list[i] != target.upper():
-                                      corrected_list[i] = target.upper()
-                                      changed = True
-                                      logger.debug(f"Applying char correction: {source}->{target} at index {i}")
-                                      break # Apply first matching correction for this position
-                         except ValueError:
-                             logger.warning(f"Skipping invalid char correction pattern: {pattern}")
-            return "".join(corrected_list) if changed else current_text
-
-        corrected_by_char = apply_character_corrections(text, character_corrections)
-        if corrected_by_char != text:
-            logger.info(f"Applied character-level feedback correction: {text} -> {corrected_by_char}")
-            return corrected_by_char
-
-        # 5. No suitable correction found
-        logger.debug(f"No applicable feedback correction found for text: '{text}'")
-        return text
-
-    except Exception as e:
-        logger.error(f"Error during apply_feedback_correction for text '{text}': {e}")
-        logger.error(traceback.format_exc())
-        return text # Return original text on error 
