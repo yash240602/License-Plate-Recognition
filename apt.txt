@@ -1,0 +1,5 @@
+tesseract-ocr
+libtesseract-dev
+ffmpeg
+libsm6
+libxext6 
