@@ -200,14 +200,14 @@ def upload_file():
 
                 # 2. Recognize text using the improved function
                 logger.debug("Recognizing text...")
-                plate_text = recognize_text(plate_img, model_data)
-                plate_text = plate_text if plate_text else "Recognition Failed"
-                logger.info(f"Recognized text: '{plate_text}'")
+                # recognize_text now returns (text, source)
+                plate_text, recognition_source = recognize_text(plate_img, model_data)
+                plate_text = plate_text if plate_text else "Error" # Ensure not None for display
+                logger.info(f"Recognized text: '{plate_text}' (Source: {recognition_source})")
 
-                # 3. Get confidence score (based on text or model score if available)
-                # Assuming get_confidence_score is adapted or uses detection score
-                confidence = get_confidence_score(plate_text) # Or pass best_score? Needs review.
-                logger.info(f"Confidence score: {confidence:.2f}")
+                # 3. Get confidence score explicitly passing text and source
+                confidence = get_confidence_score(plate_text, recognition_source)
+                logger.info(f"Confidence score: {confidence:.2f}%")
 
                 # 4. Save the original image with bounding box overlay
                 output_img = image.copy()
@@ -279,44 +279,118 @@ def view_history():
         with open(HISTORY_FILE, 'r') as f:
             try:
                 history = json.load(f)
+                # Ensure each entry has required fields to avoid template errors
+                for entry in history:
+                    # Ensure all entries have processed_image field
+                    if 'processed_image' not in entry:
+                        # Try to construct it from other fields
+                        if 'original_image' in entry:
+                            # Strip url_for prefix if present
+                            original = entry['original_image']
+                            if original.startswith('/static/'):
+                                original = original[8:]  # Remove '/static/' prefix
+                            elif original.startswith('/'):
+                                original = original[1:]  # Remove leading slash
+                            
+                            entry['processed_image'] = f"results/processed_{os.path.basename(original)}"
+                        else:
+                            entry['processed_image'] = 'placeholder.png'
+                    
+                    # Ensure numeric confidence values
+                    if 'confidence' in entry:
+                        try:
+                            entry['confidence'] = float(entry['confidence'])
+                        except (ValueError, TypeError):
+                            entry['confidence'] = 0.0
+                    else:
+                        entry['confidence'] = 0.0
+                    
+                    # Ensure plate_text is a string
+                    if 'plate_text' not in entry or entry['plate_text'] is None:
+                        entry['plate_text'] = "Unknown"
+                    
+                    # Add timestamp if missing
+                    if 'timestamp' not in entry:
+                        entry['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
             except json.JSONDecodeError:
+                logger.error("Error parsing history JSON file")
                 history = []
     
     return render_template('history.html', history=history)
 
 @app.route('/correct', methods=['POST'])
 def correct_text():
-    """Handles user feedback submission."""
-    logger.info("Text correction feedback received")
-    data = request.get_json()
-    if not data:
-        logger.error("Correction request has no JSON data")
-        return jsonify({'success': False, 'error': 'Invalid request format'}), 400
-
-    image_path = data.get('image_path') # Keep for logging/context if needed
-    original_text = data.get('original_text')
-    corrected_text = data.get('corrected_text')
-    was_correct = data.get('was_correct', False)
-
-    if original_text is None or (not was_correct and corrected_text is None):
-        logger.error(f"Missing text data in correction request: {data}")
-        return jsonify({'success': False, 'error': 'Missing text data'}), 400
-
-    # Call feedback handler WITHOUT image_path
-    success = handle_edit_text_feedback(
-        original_text=original_text,
-        corrected_text=corrected_text if not was_correct else original_text,
-        was_correct=was_correct
-    )
-
-    if success:
-        log_context = f"image related to: {image_path}" if image_path else "feedback submission"
-        logger.info(f"Feedback processed successfully for {log_context}")
-        return jsonify({'success': True})
-    else:
-        log_context = f"image related to: {image_path}" if image_path else "feedback submission"
-        logger.error(f"Failed to save feedback for {log_context}")
-        return jsonify({'success': False, 'error': 'Failed to save feedback'}), 500
+    """
+    Endpoint for receiving text corrections from the user.
+    Updates the recognition history and saves feedback data for future improvements.
+    """
+    try:
+        data = request.json
+        if not data:
+            logger.error("Empty data in correction request")
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+            
+        # Extract correction data
+        result_id = data.get('id', '')
+        original = data.get('original', '')
+        corrected = data.get('corrected', '')
+        
+        # Validate data
+        if not original:
+            logger.error("Missing original text in correction request")
+            return jsonify({'success': False, 'error': 'Missing original text'}), 400
+            
+        # Check if this is a confirmation (original == corrected) or a correction
+        is_confirmation = original == corrected
+        
+        # Log the feedback
+        if is_confirmation:
+            logger.info(f"User confirmed recognition: '{original}'")
+        else:
+            logger.info(f"Text correction: '{original}' -> '{corrected}'")
+        
+        # Find history entry if ID provided
+        updated = False
+        if result_id:
+            history = get_processing_history()
+            for entry in history:
+                if entry.get('id') == result_id:
+                    # Update history with correction
+                    if not is_confirmation:
+                        entry['plate_text'] = corrected
+                        entry['corrected'] = True
+                        entry['original_text'] = original
+                    else:
+                        entry['confirmed'] = True
+                    
+                    save_processing_history(history)
+                    updated = True
+                    break
+        
+        # Save feedback for recognition improvement
+        try:
+            # Call the proper feedback handler
+            success = handle_edit_text_feedback(
+                original_text=original,
+                corrected_text=corrected,
+                was_correct=is_confirmation
+            )
+            
+            if not success:
+                logger.warning(f"Failed to save feedback data: {original} -> {corrected}")
+                return jsonify({'success': False, 'error': 'Failed to save feedback'}), 500
+        except Exception as e:
+            logger.error(f"Error saving feedback: {str(e)}")
+            logger.error(traceback.format_exc())
+            return jsonify({'success': False, 'error': f'Error saving feedback: {str(e)}'}), 500
+                
+        return jsonify({'success': True, 'updated': updated})
+        
+    except Exception as e:
+        logger.error(f"Error processing correction: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/test')
 def test():
