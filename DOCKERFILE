@@ -1,0 +1,32 @@
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim-bullseye
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install system dependencies including Tesseract OCR
+# No sudo needed here as Docker build runs as root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code into the container
+COPY . .
+
+# Make port 8080 available to the world outside this container
+# (Render typically maps its external port to this)
+# Use the PORT environment variable provided by Render, default to 8080 if not set
+ENV PORT 8080
+EXPOSE $PORT 
+
+# Define the command to run the application using Gunicorn
+# Render will automatically respect the PORT variable
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:${PORT}"]
