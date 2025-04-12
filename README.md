@@ -1,103 +1,121 @@
-# License Plate Recognition
+# License Plate Recognition Web App
 
-This project is a simple web application that uses computer vision techniques to detect and attempt to recognize text on license plates in uploaded images.
+This project demonstrates a web application for detecting and recognizing license plates from uploaded images using computer vision and OCR techniques.
 
 ![License Plate Recognition Demo](docs/license_plate_demo.jpg)
 
-## Features
+## Key Features & Technologies
 
-*   **Image Upload:** Upload car images via drag-and-drop or file selection.
-*   **Plate Detection:** Attempts to automatically locate the license plate region within the image using basic OpenCV techniques (contour finding).
-*   **OCR Attempt:** Uses Tesseract OCR to try and read the text from the detected plate region.
-*   **Feedback Mechanism:** Allows users to correct misread plates. This feedback is stored and can potentially be used to improve future results (though advanced learning isn't implemented in this simplified version).
-*   **Result Display:** Shows the original image, the detected plate crop, the recognized text, and a confidence score.
+*   **Web Interface:** Simple, clean UI built with **Flask**, HTML, CSS, and basic JavaScript.
+*   **Image Upload:** Easy drag-and-drop or file selection for image input.
+*   **Plate Detection:** Utilizes **OpenCV** for image preprocessing (grayscale, blur, adaptive thresholding, CLAHE) and contour detection to locate potential license plate regions.
+*   **OCR Engine:** Employs **Tesseract OCR** (via `pytesseract`) to extract text from the detected and enhanced plate images.
+*   **Confidence Scoring:** Provides a heuristic-based confidence score evaluating the quality and format of the OCR result.
+*   **User Feedback Loop:** Allows users to correct inaccurate OCR results, storing feedback (original vs. corrected text) for potential future improvements (Note: advanced retraining is not implemented in this version).
+*   **Backend Server:** Runs on **Waitress**, a production-quality WSGI server.
 
-## How It Works (Simplified)
+## How It Works (High-Level)
 
-1.  **Upload:** You provide an image.
-2.  **Detection:** Basic image processing (grayscale, blur, thresholding, contour detection) is used to find rectangular areas that might be license plates.
-3.  **Cropping:** The most likely candidate region is cropped.
-4.  **Enhancement:** The cropped image undergoes processing (CLAHE, resizing, thresholding variations) to improve contrast and clarity for OCR.
-5.  **OCR:** Tesseract OCR is run on the enhanced image(s).
-6.  **Result Selection:** The best result from Tesseract (based on matching common plate patterns) is chosen.
-7.  **Confidence Score:** A score is calculated based on the OCR result quality and pattern matching.
-8.  **Feedback (Optional):** If the result is wrong, you can correct it, and this pair (original OCR vs. corrected) is stored.
+1.  **Upload:** User uploads an image via the web interface.
+2.  **Detection:** The Flask backend receives the image. OpenCV functions process the image to find the most likely rectangular license plate candidate.
+3.  **Enhancement & OCR:** The detected plate region is cropped and enhanced using various OpenCV techniques (CLAHE, resizing, thresholding) to maximize OCR accuracy. Tesseract attempts to read the text from these enhanced versions.
+4.  **Result Selection & Scoring:** The best Tesseract result (based on pattern matching) is selected, and a confidence score is calculated.
+5.  **Display:** The original image, plate crop, recognized text, and confidence score are displayed to the user.
+6.  **Feedback:** Users can submit corrections, which are logged.
 
-## Running Locally (Easy Setup)
+## Running Locally (Step-by-Step)
 
-Getting this running on your own machine is straightforward!
+Want to run this on your machine? Follow these steps:
 
 **Prerequisites:**
 
-1.  **Python:** You'll need Python installed (Version 3.9, 3.10, or 3.11 recommended). If you don't have it, grab it from [python.org](https://www.python.org/downloads/). Make sure to check "Add Python to PATH" during installation on Windows.
-2.  **Git (Optional):** Useful for cloning the project, but you can also download the code as a ZIP file from GitHub.
-3.  **Tesseract OCR:** This is essential for reading the text.
-    *   **macOS:** `brew install tesseract`
-    *   **Ubuntu/Debian Linux:** `sudo apt update && sudo apt install tesseract-ocr`
-    *   **Windows:** Download the installer from the official [Tesseract at UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki) page. Make sure `tesseract.exe` is added to your system's PATH.
+1.  **Python:** Version **3.11.x** is recommended (as the included `tensorflow_env` was built with it). Download from [python.org](https://www.python.org/downloads/) if needed. *(Ensure Python is added to your system's PATH during installation)*.
+2.  **Git (Optional but Recommended):** For easy cloning. Install from [git-scm.com](https://git-scm.com/).
+3.  **Tesseract OCR Engine:** The core OCR component.
+    *   **macOS:** Open Terminal and run: `brew install tesseract`
+    *   **Ubuntu/Debian Linux:** Open Terminal and run: `sudo apt update && sudo apt install tesseract-ocr`
+    *   **Windows:** Download an installer (e.g., from [Tesseract at UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki)). **Crucially, ensure you add the Tesseract installation directory to your system's PATH environment variable** so the application can find `tesseract.exe`.
 
 **Setup Steps:**
 
-1.  **Get the Code:**
+1.  **Clone the Repository:**
     ```bash
-    # Clone the repository
     git clone https://github.com/yash240602/License-Plate-Recognition.git
-    # Navigate into the project directory
     cd License-Plate-Recognition
     ```
-    *(Or download and unzip the project)*
+    *(Alternatively, download the ZIP from GitHub and extract it.)*
 
-2.  **Create a Virtual Environment:** (Keeps dependencies tidy!)
+2.  **Create & Activate Virtual Environment:**
     ```bash
-    python3 -m venv tensorflow_env 
+    # Create the environment (using Python 3.11)
+    python3.11 -m venv tensorflow_env
+
+    # Activate it
+    # macOS/Linux:
+    source tensorflow_env/bin/activate
+    # Windows (CMD/PowerShell):
+    # tensorflow_env\Scripts\activate
     ```
-    *Note: We name it `tensorflow_env` because it needs specific Python versions compatible with TensorFlow, even though TF isn't actively used for prediction in this simplified version.*
+    *(Your terminal prompt should now start with `(tensorflow_env)`)*
 
-3.  **Activate the Environment:**
-    *   **macOS/Linux:** `source tensorflow_env/bin/activate`
-    *   **Windows (Git Bash/WSL):** `source tensorflow_env/bin/activate`
-    *   **Windows (CMD/PowerShell):** `tensorflow_env\Scripts\activate`
-    *(You should see `(tensorflow_env)` at the start of your terminal prompt)*
-
-4.  **Install Required Packages:**
+3.  **Install Dependencies:**
     ```bash
-    # Make sure pip is up-to-date
-    pip install --upgrade pip 
-    # Install from the requirements file
+    # Upgrade pip first
+    pip install --upgrade pip
+
+    # Install Python packages
     pip install -r requirements.txt
-    ```
-    *If you are on an Apple Silicon Mac (M1/M2/M3), you also need TensorFlow acceleration:* 
-    `pip install tensorflow-metal`
 
-**Running the App:**
+    # If on Apple Silicon (M1/M2/M3) Mac, install Metal plugin for TensorFlow:
+    # pip install tensorflow-metal 
+    # (Note: TF isn't used for prediction here, but metal helps avoid CPU fallback warnings if TF loads)
+    ```
+
+**Run the Application:**
 
 1.  **Start the Server:**
     ```bash
     python run_server.py
     ```
 
-2.  **Access in Browser:** Open your web browser and go to:
-    `http://localhost:8080`
+2.  **Open in Browser:** Navigate to `http://localhost:8080`
 
-You should see the License Plate Recognition interface! Upload an image to test it out.
+Enjoy testing the license plate recognition!
 
-## Tech Overview
+## Project Structure
 
-*   **Backend:** Flask, Waitress
-*   **Core Logic:** Python
-*   **Image Processing:** OpenCV, Pillow
-*   **OCR:** PyTesseract (wrapper for Tesseract)
-*   **Environment:** Python 3.9-3.11 recommended
+```
+├── app.py                  # Main Flask application routes and logic
+├── license_plate_model.py  # Core detection, OCR, enhancement functions
+├── run_server.py           # Script to run the app using Waitress
+├── requirements.txt        # Python package dependencies
+├── README.md               # This file
+├── LICENSE                 # Project license
+├── model/                  # Directory for placeholder model files (.h5, .json)
+├── static/
+│   ├── css/                # Stylesheets
+│   ├── js/                 # JavaScript for frontend interaction
+│   ├── uploads/            # User-uploaded images stored here
+│   └── results/            # Processed images (plate crops, overlays) stored here
+├── templates/
+│   ├── index.html          # Main application page template
+│   └── history.html        # (If implemented) Page to view past results
+├── docs/                   # Project documentation/images
+├── .gitignore              # Specifies intentionally untracked files (like venvs)
+└── recognition_feedback.json # Stores user feedback (created on first feedback)
+└── processing_history.json   # Stores results history (created on first upload)
+```
 
 ## Limitations in this Version
 
-*   **No Deep Learning Model:** This simplified version relies primarily on OpenCV for detection and Tesseract for OCR. The placeholder model files (`.h5`) are included but contain no actual trained network. Accuracy will vary greatly depending on image quality and Tesseract's performance.
-*   **Basic Detection:** The plate detection uses contour finding, which can be fooled by other rectangular shapes in the image.
-*   **Limited Feedback Use:** Feedback is stored but not used for complex retraining in this version.
+*   **OCR Accuracy:** Relies heavily on Tesseract OCR. Accuracy varies with image quality, plate fonts, angles, and lighting.
+*   **No Trained ML Model:** Uses placeholder `.h5` files. Detection is CV-based (OpenCV), and recognition is Tesseract-based. Real TensorFlow models would significantly improve robustness and accuracy.
+*   **Basic Detection:** Contour-based detection can be unreliable.
+*   **Simplified Feedback:** Feedback is logged but not used for automated retraining.
 
 ## Contributing
 
-Feel free to fork the project, make improvements, and submit pull requests!
+Contributions and improvements are welcome! Please feel free to fork and submit pull requests.
 
 ## License
 
