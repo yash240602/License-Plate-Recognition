@@ -1,140 +1,104 @@
 # License Plate Recognition
 
-Hey there! This is my license plate recognition project that I built for my computer vision class. It's basically a web app that can look at pictures of cars and read what's on their license plates!
+This project is a simple web application that uses computer vision techniques to detect and attempt to recognize text on license plates in uploaded images.
 
 ![License Plate Recognition Demo](docs/license_plate_demo.jpg)
 
-## What This Does
+## Features
 
-I spent way too many weekends building this, but it was pretty fun! Here's what it can do:
+*   **Image Upload:** Upload car images via drag-and-drop or file selection.
+*   **Plate Detection:** Attempts to automatically locate the license plate region within the image using basic OpenCV techniques (contour finding).
+*   **OCR Attempt:** Uses Tesseract OCR to try and read the text from the detected plate region.
+*   **Feedback Mechanism:** Allows users to correct misread plates. This feedback is stored and can potentially be used to improve future results (though advanced learning isn't implemented in this simplified version).
+*   **Result Display:** Shows the original image, the detected plate crop, the recognized text, and a confidence score.
 
-- **Upload Pictures:** Just drag and drop any car picture
-- **Find the License Plate:** The app automatically finds where the license plate is in the image
-- **Read the Text:** It figures out what letters and numbers are on the plate
-- **Learn from Mistakes:** If it reads something wrong, you can correct it and it learns from that
-- **Save Results:** You can download the results or check your history
+## How It Works (Simplified)
 
-## How It Works
+1.  **Upload:** You provide an image.
+2.  **Detection:** Basic image processing (grayscale, blur, thresholding, contour detection) is used to find rectangular areas that might be license plates.
+3.  **Cropping:** The most likely candidate region is cropped.
+4.  **Enhancement:** The cropped image undergoes processing (CLAHE, resizing, thresholding variations) to improve contrast and clarity for OCR.
+5.  **OCR:** Tesseract OCR is run on the enhanced image(s).
+6.  **Result Selection:** The best result from Tesseract (based on matching common plate patterns) is chosen.
+7.  **Confidence Score:** A score is calculated based on the OCR result quality and pattern matching.
+8.  **Feedback (Optional):** If the result is wrong, you can correct it, and this pair (original OCR vs. corrected) is stored.
 
-When you use the app, it does these steps:
+## Running Locally (Easy Setup)
 
-1. You upload a car picture
-2. It finds the license plate (puts a green box around it)
-3. It reads the text (like "DL 7 CN 5617" in the picture above)
-4. You can tell it if it got it right or fix any mistakes
+Getting this running on your own machine is straightforward!
 
-## Try It Yourself! (Kid-Friendly Steps)
+**Prerequisites:**
 
-Want to run this on your own computer? Here's how:
+1.  **Python:** You'll need Python installed (Version 3.9, 3.10, or 3.11 recommended). If you don't have it, grab it from [python.org](https://www.python.org/downloads/). Make sure to check "Add Python to PATH" during installation on Windows.
+2.  **Git (Optional):** Useful for cloning the project, but you can also download the code as a ZIP file from GitHub.
+3.  **Tesseract OCR:** This is essential for reading the text.
+    *   **macOS:** `brew install tesseract`
+    *   **Ubuntu/Debian Linux:** `sudo apt update && sudo apt install tesseract-ocr`
+    *   **Windows:** Download the installer from the official [Tesseract at UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki) page. Make sure `tesseract.exe` is added to your system's PATH.
 
-### Step 1: Get Python
+**Setup Steps:**
 
-If you don't already have Python:
-- Go to [Python.org](https://www.python.org/downloads/)
-- Download the latest version (3.8 or newer)
-- During installation, make sure to check the box that says "Add Python to PATH"
+1.  **Get the Code:**
+    ```bash
+    # Clone the repository
+    git clone https://github.com/yash240602/License-Plate-Recognition.git
+    # Navigate into the project directory
+    cd License-Plate-Recognition
+    ```
+    *(Or download and unzip the project)*
 
-### Step 2: Get This Project
+2.  **Create a Virtual Environment:** (Keeps dependencies tidy!)
+    ```bash
+    python3 -m venv tensorflow_env 
+    ```
+    *Note: We name it `tensorflow_env` because it needs specific Python versions compatible with TensorFlow, even though TF isn't actively used for prediction in this simplified version.*
 
-```bash
-# Copy my project to your computer
-git clone https://github.com/yourusername/License-Plate-Recognition.git
+3.  **Activate the Environment:**
+    *   **macOS/Linux:** `source tensorflow_env/bin/activate`
+    *   **Windows (Git Bash/WSL):** `source tensorflow_env/bin/activate`
+    *   **Windows (CMD/PowerShell):** `tensorflow_env\Scripts\activate`
+    *(You should see `(tensorflow_env)` at the start of your terminal prompt)*
 
-# Go to the project folder
-cd License-Plate-Recognition
-```
+4.  **Install Required Packages:**
+    ```bash
+    # Make sure pip is up-to-date
+    pip install --upgrade pip 
+    # Install from the requirements file
+    pip install -r requirements.txt
+    ```
+    *If you are on an Apple Silicon Mac (M1/M2/M3), you also need TensorFlow acceleration:* 
+    `pip install tensorflow-metal`
 
-Don't know what git is? No problem:
-- Just click the green "Code" button at the top of this page
-- Choose "Download ZIP"
-- Unzip it somewhere on your computer
+**Running the App:**
 
-### Step 3: Set Everything Up
+1.  **Start the Server:**
+    ```bash
+    python run_server.py
+    ```
 
-```bash
-# Create a special environment (this keeps things organized)
-python -m venv venv
+2.  **Access in Browser:** Open your web browser and go to:
+    `http://localhost:8080`
 
-# Activate the environment
-# On Windows:
-venv\Scripts\activate
-# On Mac or Linux:
-source venv/bin/activate
+You should see the License Plate Recognition interface! Upload an image to test it out.
 
-# Install all the stuff this project needs
-pip install -r requirements.txt
+## Tech Overview
 
-# Install Tesseract OCR (this helps read text from images)
-# On Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
-# On Mac:
-brew install tesseract
-# On Linux:
-sudo apt install tesseract-ocr
-```
+*   **Backend:** Flask, Waitress
+*   **Core Logic:** Python
+*   **Image Processing:** OpenCV, Pillow
+*   **OCR:** PyTesseract (wrapper for Tesseract)
+*   **Environment:** Python 3.9-3.11 recommended
 
-### Step 4: Start It Up!
+## Limitations in this Version
 
-```bash
-python run_server.py
-```
+*   **No Deep Learning Model:** This simplified version relies primarily on OpenCV for detection and Tesseract for OCR. The placeholder model files (`.h5`) are included but contain no actual trained network. Accuracy will vary greatly depending on image quality and Tesseract's performance.
+*   **Basic Detection:** The plate detection uses contour finding, which can be fooled by other rectangular shapes in the image.
+*   **Limited Feedback Use:** Feedback is stored but not used for complex retraining in this version.
 
-Then open your web browser and go to: http://localhost:8080
+## Contributing
 
-## For CS Students & Recruiters
-
-I built this as my final project after learning about computer vision and machine learning. I wanted to create something practical that solves a real problem. Here's some tech details:
-
-### The Tech Stack
-
-- **Frontend:** Just basic HTML/CSS/JavaScript with some Bootstrap to make it look decent
-- **Backend:** Flask for the web server, running on Waitress for better performance
-- **Computer Vision:** OpenCV for image processing and finding license plates
-- **Text Recognition:** Tesseract OCR for reading the text
-- **Machine Learning:** The system can use TensorFlow models for better detection (when available)
-- **Continuous Learning:** The app remembers corrections and gets better over time
-
-### Technical Parts I'm Proud Of
-
-1. **Image Processing Pipeline**
-   - Used adaptive thresholding to handle different lighting conditions
-   - Applied contour detection to find rectangular plate shapes
-   - Built a preprocessing pipeline that enhances text readability
-
-2. **The Feedback System**
-   - Implemented a correction mechanism that learns from user feedback
-   - Created region-specific pattern recognition for different license plate formats
-   - Built character-level correction for common OCR mistakes
-
-3. **Error Handling**
-   - Made the system gracefully fall back to simpler methods when needed
-   - Implemented extensive logging for troubleshooting
-   - Built detailed confidence scoring to estimate accuracy
-
-## Known Limitations & Future Improvements
-
-I'm still working on this! Some things I want to add:
-
-- Support for multiple cars in one image
-- Real-time video processing (if I can make it fast enough)
-- Better support for international license plates
-- A mobile app version
-
-## Requirements
-
-Check [requirements.txt](requirements.txt) for the full list of dependencies.
+Feel free to fork the project, make improvements, and submit pull requests!
 
 ## License
 
-This project is under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Want to Help?
-
-Found a bug or have ideas to make this better? Feel free to contribute! Just fork, make your changes, and submit a pull request.
-
-## Acknowledgements
-
-Huge thanks to:
-- OpenCV library (saved me so much time)
-- Tesseract OCR (for the text recognition magic)
-- My prof who didn't fail me despite all my deadline extensions 😅
-- All the Stack Overflow posts that helped debug this thing!
+MIT License - see [LICENSE](LICENSE).
