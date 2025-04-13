@@ -6,141 +6,105 @@
     <title>License Plate Recognition</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        
-        .container {
+            font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
         h1 {
-            text-align: center;
             color: #2c3e50;
+            text-align: center;
         }
-        
         .upload-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 20px;
             border: 2px dashed #ccc;
+            border-radius: 8px;
+        }
+        #dropArea {
+            cursor: pointer;
             padding: 20px;
             text-align: center;
-            margin: 20px 0;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            transition: background-color 0.3s;
+            width: 100%;
         }
-        
-        .upload-container.highlight {
-            background-color: #e3f2fd;
-            border-color: #2196F3;
-        }
-        
-        .upload-container p {
-            margin: 10px 0;
-            color: #666;
-        }
-        
-        #file-input {
+        #results {
+            margin-top: 30px;
             display: none;
         }
-        
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
-        
-        .btn:hover {
-            background-color: #0d8aee;
-        }
-        
-        .btn:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .preview-container {
-            margin: 20px 0;
+        .result-item {
             text-align: center;
         }
-        
-        #preview-image {
+        .result-item img {
             max-width: 100%;
-            max-height: 300px;
-            display: none;
-            margin: 0 auto;
             border-radius: 4px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
-        .result-container {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #e0e0e0;
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
             border-radius: 4px;
-            display: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
         }
-        
-        .result-container h3 {
-            margin-top: 0;
-            color: #2c3e50;
+        .btn:hover {
+            background-color: #2980b9;
         }
-        
-        .plate-text {
-            font-size: 24px;
-            font-weight: bold;
-            background-color: #ffeb3b;
-            padding: 10px;
-            display: inline-block;
-            border-radius: 4px;
-            margin: 10px 0;
-            letter-spacing: 2px;
-        }
-        
-        .confidence {
-            color: #666;
-            font-style: italic;
-        }
-        
         .loading {
             display: none;
             text-align: center;
             margin: 20px 0;
         }
-        
-        .loading-spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top: 4px solid #2196F3;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
+        .loading img {
+            width: 50px;
         }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error-message {
-            color: #f44336;
+        .error {
+            color: #e74c3c;
             text-align: center;
-            margin: 10px 0;
+            margin: 20px 0;
             display: none;
+        }
+        #plateText {
+            font-weight: bold;
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        #confidence {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .info-box {
+            background-color: #f9f9f9;
+            border-left: 4px solid #3498db;
+            padding: 10px 15px;
+            margin: 20px 0;
+        }
+        .history-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+        }
+        .history-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -148,157 +112,239 @@
     <div class="container">
         <h1>License Plate Recognition</h1>
         
-        <div class="upload-container" id="upload-container">
-            <p>Drag & Drop an image here or</p>
-            <input type="file" id="file-input" accept=".jpg,.jpeg,.png">
-            <button class="btn" id="select-file-btn">Select File</button>
-            <p class="small">Supported formats: JPG, JPEG, PNG</p>
+        <div class="info-box">
+            <p>Upload an image containing a license plate, and our system will automatically detect and recognize the plate text.</p>
         </div>
         
-        <div class="preview-container">
-            <img id="preview-image" alt="Preview">
+        <div class="upload-container">
+            <div id="dropArea">
+                <p>Drag and drop an image here, or click to select a file</p>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <button class="btn" id="browseBtn">Browse Files</button>
+            </div>
         </div>
         
-        <div class="text-center">
-            <button class="btn" id="process-btn" disabled>Process Image</button>
+        <div id="loading" class="loading">
+            <p>Processing your image...</p>
+            <div class="spinner"></div>
         </div>
         
-        <div class="loading" id="loading">
-            <div class="loading-spinner"></div>
-            <p>Processing image...</p>
+        <div id="error" class="error"></div>
+        
+        <div id="results">
+            <div id="plateText"></div>
+            <div id="confidence"></div>
+            
+            <div class="result-grid">
+                <div class="result-item">
+                    <h3>Original Image</h3>
+                    <img id="originalImage" src="" alt="Original Image">
+                </div>
+                <div class="result-item">
+                    <h3>Processed Image</h3>
+                    <img id="processedImage" src="" alt="Processed Image">
+                </div>
+            </div>
+            
+            <div class="result-item" style="margin-top: 20px;">
+                <h3>Extracted Plate</h3>
+                <img id="plateImage" src="" alt="Plate Image">
+            </div>
+            
+            <div id="feedbackSection" style="margin-top: 30px; text-align: center; display: none;">
+                <p>Is this recognition correct?</p>
+                <div>
+                    <button class="btn" style="background-color: #2ecc71;" id="correctBtn">Yes, Correct</button>
+                    <button class="btn" style="background-color: #e74c3c; margin-left: 10px;" id="incorrectBtn">No, Incorrect</button>
+                </div>
+                <div id="correctionForm" style="display: none; margin-top: 15px;">
+                    <p>Please enter the correct text:</p>
+                    <input type="text" id="correctedText" style="padding: 8px; width: 200px;">
+                    <button class="btn" id="submitCorrectionBtn">Submit Correction</button>
+                </div>
+            </div>
         </div>
         
-        <div class="error-message" id="error-message"></div>
-        
-        <div class="result-container" id="result-container">
-            <h3>Detected License Plate</h3>
-            <div class="plate-text" id="plate-text"></div>
-            <p class="confidence" id="confidence"></p>
-        </div>
+        <a href="/history" class="history-link">View Processing History</a>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const uploadContainer = document.getElementById('upload-container');
-            const fileInput = document.getElementById('file-input');
-            const selectFileBtn = document.getElementById('select-file-btn');
-            const previewImage = document.getElementById('preview-image');
-            const processBtn = document.getElementById('process-btn');
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
             const loading = document.getElementById('loading');
-            const resultContainer = document.getElementById('result-container');
-            const plateText = document.getElementById('plate-text');
+            const error = document.getElementById('error');
+            const results = document.getElementById('results');
+            const originalImage = document.getElementById('originalImage');
+            const processedImage = document.getElementById('processedImage');
+            const plateImage = document.getElementById('plateImage');
+            const plateText = document.getElementById('plateText');
             const confidence = document.getElementById('confidence');
-            const errorMessage = document.getElementById('error-message');
+            const feedbackSection = document.getElementById('feedbackSection');
+            const correctBtn = document.getElementById('correctBtn');
+            const incorrectBtn = document.getElementById('incorrectBtn');
+            const correctionForm = document.getElementById('correctionForm');
+            const correctedText = document.getElementById('correctedText');
+            const submitCorrectionBtn = document.getElementById('submitCorrectionBtn');
+            
+            let resultId = '';
+            let originalPlateText = '';
+            
+            // Open file browser when clicking the browse button or drop area
+            browseBtn.addEventListener('click', () => fileInput.click());
+            dropArea.addEventListener('click', () => fileInput.click());
             
             // Handle file selection
-            selectFileBtn.addEventListener('click', function() {
-                fileInput.click();
-            });
-            
-            // Handle file input change
             fileInput.addEventListener('change', handleFileSelect);
             
-            // Handle drag and drop events
-            uploadContainer.addEventListener('dragover', function(e) {
+            // Drag and drop functionality
+            dropArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                uploadContainer.classList.add('highlight');
+                dropArea.style.backgroundColor = '#f0f0f0';
             });
             
-            uploadContainer.addEventListener('dragleave', function() {
-                uploadContainer.classList.remove('highlight');
+            dropArea.addEventListener('dragleave', () => {
+                dropArea.style.backgroundColor = 'transparent';
             });
             
-            uploadContainer.addEventListener('drop', function(e) {
+            dropArea.addEventListener('drop', (e) => {
                 e.preventDefault();
-                uploadContainer.classList.remove('highlight');
+                dropArea.style.backgroundColor = 'transparent';
                 
                 if (e.dataTransfer.files.length) {
                     fileInput.files = e.dataTransfer.files;
-                    handleFileSelect();
+                    handleFileSelect(e);
                 }
             });
             
-            // Process button click
-            processBtn.addEventListener('click', processImage);
-            
-            function handleFileSelect() {
-                const file = fileInput.files[0];
-                
-                if (file && isValidFileType(file)) {
-                    // Show preview
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        previewImage.src = e.target.result;
-                        previewImage.style.display = 'block';
-                        processBtn.disabled = false;
-                    };
-                    reader.readAsDataURL(file);
-                    
-                    // Reset results
-                    resultContainer.style.display = 'none';
-                    errorMessage.style.display = 'none';
-                } else if (file) {
-                    showError('Invalid file type. Please select a JPG, JPEG, or PNG image.');
-                    resetForm();
-                }
-            }
-            
-            function isValidFileType(file) {
-                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-                return validTypes.includes(file.type);
-            }
-            
-            function processImage() {
+            // Handle file upload
+            function handleFileSelect(e) {
                 const file = fileInput.files[0];
                 if (!file) return;
                 
-                // Show loading
-                loading.style.display = 'block';
-                processBtn.disabled = true;
-                errorMessage.style.display = 'none';
+                // Check if file is an image
+                if (!file.type.match('image.*')) {
+                    showError('Please select an image file (JPEG, PNG)');
+                    return;
+                }
+                
+                // Prepare for upload
+                resetUI();
+                showLoading();
                 
                 // Create form data
                 const formData = new FormData();
                 formData.append('file', file);
                 
-                // Send request
+                // Upload the file
                 fetch('/upload', {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Server error occurred');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    // Hide loading
-                    loading.style.display = 'none';
+                    hideLoading();
+                    
+                    if (data.error) {
+                        showError(data.error);
+                        return;
+                    }
                     
                     // Show results
-                    plateText.textContent = data.plate_text;
-                    confidence.textContent = `Confidence: ${data.confidence}%`;
-                    resultContainer.style.display = 'block';
+                    resultId = data.result_id;
+                    originalPlateText = data.plate_text;
                     
-                    processBtn.disabled = false;
+                    originalImage.src = data.original_image;
+                    processedImage.src = data.processed_image;
+                    plateImage.src = data.plate_image;
+                    plateText.textContent = data.plate_text;
+                    confidence.textContent = `Confidence: ${data.confidence.toFixed(1)}%`;
+                    
+                    results.style.display = 'block';
+                    
+                    // Show feedback section if confidence is low
+                    if (data.needs_feedback) {
+                        feedbackSection.style.display = 'block';
+                        correctedText.value = data.plate_text;
+                    }
                 })
-                .catch(error => {
-                    loading.style.display = 'none';
-                    showError(error.message || 'An error occurred while processing the image');
-                    processBtn.disabled = false;
+                .catch(err => {
+                    hideLoading();
+                    showError('An error occurred while processing the image');
+                    console.error(err);
                 });
             }
             
-            function showError(message) {
-                errorMessage.textContent = message;
-                errorMessage.style.display = 'block';
+            // Handle feedback
+            correctBtn.addEventListener('click', () => {
+                sendFeedback(originalPlateText, originalPlateText, true);
+            });
+            
+            incorrectBtn.addEventListener('click', () => {
+                correctionForm.style.display = 'block';
+            });
+            
+            submitCorrectionBtn.addEventListener('click', () => {
+                const correction = correctedText.value.trim();
+                if (correction) {
+                    sendFeedback(originalPlateText, correction, false);
+                }
+            });
+            
+            function sendFeedback(original, corrected, wasCorrect) {
+                // Send feedback to the server
+                fetch('/correct', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: resultId,
+                        original: original,
+                        corrected: corrected
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        feedbackSection.innerHTML = '<p style="color: green;">Thank you for your feedback!</p>';
+                        
+                        // Update the displayed text if it was corrected
+                        if (!wasCorrect) {
+                            plateText.textContent = corrected;
+                            plateText.style.color = '#e74c3c';
+                        }
+                    } else {
+                        showError('Failed to submit feedback: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(err => {
+                    showError('An error occurred while submitting feedback');
+                    console.error(err);
+                });
             }
             
-            function resetForm() {
-                fileInput.value = '';
-                previewImage.style.display = 'none';
-                processBtn.disabled = true;
+            // UI Helper functions
+            function resetUI() {
+                results.style.display = 'none';
+                error.style.display = 'none';
+                feedbackSection.style.display = 'none';
+                correctionForm.style.display = 'none';
+                plateText.style.color = 'initial';
+            }
+            
+            function showLoading() {
+                loading.style.display = 'block';
+            }
+            
+            function hideLoading() {
+                loading.style.display = 'none';
+            }
+            
+            function showError(message) {
+                error.textContent = message;
+                error.style.display = 'block';
             }
         });
     </script>

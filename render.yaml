@@ -1,0 +1,13 @@
+services:
+  # A web service for the license plate recognition app
+  - type: web
+    name: license-plate-recognition
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app_simplified:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: PYTHONUNBUFFERED
+        value: true
+    autoDeploy: false 

@@ -2,15 +2,14 @@ Flask>=2.3,<3.1
 opencv-python-headless>=4.8
 Pillow>=9.0
 pytesseract>=0.3.10
-waitress>=2.1
 Werkzeug>=2.3,<3.1 # Keep compatible with Flask 2.3
 python-Levenshtein>=0.20
 numpy>=1.21 # OpenCV dependency
+scikit-image>=0.19  # For CV detection fallback
+gunicorn>=20.1.0  # For web service deployment
+
+# Note: TensorFlow is not used since free tier hosting has limited resources
+# The app will fall back to OpenCV detection methods automatically
 
 # Optional, if using CV detection fallback or image stats
-scikit-image>=0.19 
-
-# Note: tensorflow and tensorflow-metal are installed separately via environment setup
-# gunicorn is removed as waitress is used directly in run_server.py
-# matplotlib is removed as it's not used in the core web app
 # scikit-learn is removed as it's not used in the simplified core logic 
