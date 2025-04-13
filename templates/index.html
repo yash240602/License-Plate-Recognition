@@ -4,611 +4,567 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>License Plate Recognition</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-            padding-bottom: 50px;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
         }
-        .navbar {
-            background-color: #343a40;
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        .navbar-brand {
-            font-weight: bold;
-            color: white;
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
         }
-        .main-container {
-            max-width: 1200px;
-            margin: 2rem auto;
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
         }
         .upload-container {
-            background-color: white;
+            border: 2px dashed #3498db;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            margin-bottom: 2rem;
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9fa;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        .upload-container.highlight {
+            border-color: #2ecc71;
+            background-color: #eafaf1;
+        }
+        .drop-message {
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+        .btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .primary-btn {
+            background-color: #2196F3;
+            color: white;
+        }
+        .primary-btn:hover {
+            background-color: #0b7dda;
+        }
+        .secondary-btn {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        .secondary-btn:hover {
+            background-color: #ddd;
         }
         .result-container {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            display: none;
-        }
-        .drop-zone {
-            border: 2px dashed #0d6efd;
-            border-radius: 8px;
-            padding: 4rem 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .drop-zone:hover {
-            background-color: #f1f7ff;
-        }
-        .drop-zone-active {
-            background-color: #e8f4ff;
-            border-color: #0d6efd;
-        }
-        #upload-icon {
-            font-size: 3rem;
-            color: #0d6efd;
-            margin-bottom: 1rem;
-        }
-        #file-name {
-            margin-top: 1rem;
-            font-weight: 500;
-        }
-        .btn-primary {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        .btn-outline-primary {
-            color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        .loader {
-            display: none;
-            text-align: center;
-            margin: 2rem 0;
-        }
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
-        }
-        .result-row {
-            margin-top: 1.5rem;
-        }
-        .plate-text {
-            font-size: 2rem;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 1rem;
-            letter-spacing: 2px;
-            background-color: #ffeb3b;
-            color: #000;
-            padding: 0.5rem;
+            background-color: #555;
+            color: white;
+            padding: 20px;
             border-radius: 5px;
-            border: 2px solid #ffc107;
+        }
+        .result-container h2 {
+            margin-top: 0;
+            border-bottom: 1px solid #777;
+            padding-bottom: 10px;
+        }
+        .result-container h3 {
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+        .image-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .image-box {
+            width: 48%;
+        }
+        .image-box img {
+            max-width: 100%;
+            height: auto;
+            max-height: 300px;
+            border: 1px solid #777;
+        }
+        .result-text {
+            background-color: #ffcd00;
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .confidence-container {
+            margin: 20px 0;
         }
         .confidence-bar {
-            height: 1.5rem;
-            border-radius: 0.25rem;
-            margin-top: 0.5rem;
+            height: 20px;
+            background-color: #444;
+            border-radius: 10px;
+            margin-top: 5px;
+            overflow: hidden;
         }
-        #plate-image-container {
+        .confidence-level {
+            height: 100%;
+            background-color: #ffcd00;
+            border-radius: 10px;
+        }
+        .confidence-text {
+            text-align: right;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+            gap: 10px;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #2196F3;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+            background-color: #2196F3;
+            color: white;
+            margin: -20px -20px 20px -20px;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+        }
+        .modal-header h3 {
+            margin: 0;
+        }
+        .close-modal {
+            cursor: pointer;
+            font-size: 24px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .recognized-text-box {
+            background-color: #ffcd00;
+            color: #333;
+            padding: 15px;
             text-align: center;
-            margin-top: 1rem;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 15px 0;
+            border-radius: 4px;
         }
-        #plate-image {
-            max-width: 100%;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
         }
-        #detected-image {
-            max-width: 100%;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
+        .feedback-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 15px 0;
         }
-        .edit-text-btn {
-            margin-top: 1rem;
+        .radio-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
         }
-        .history-link {
-            margin-top: 2rem;
+        .radio-option:hover {
+            background-color: #f0f0f0;
         }
-        .error-message {
-            color: #dc3545;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 5px;
-            padding: 1rem;
-            margin-top: 1rem;
-            display: none;
+        .radio-option input {
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">License Plate Recognition System</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/history">History</a>
-                    </li>
-                </ul>
-            </div>
+    <div class="container">
+        <h1>License Plate Recognition</h1>
+        <p class="subtitle">Upload an image to detect and recognize license plates</p>
+        
+        <!-- Upload Container -->
+        <div id="upload-container" class="upload-container">
+            <div class="drop-message">Drag & drop an image here or click to browse</div>
+            <input type="file" id="file-input" accept=".jpg,.jpeg,.png" style="display: none;">
+            <button id="upload-btn" class="btn primary-btn">Choose Image</button>
         </div>
-    </nav>
-
-    <div class="main-container container">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="mb-4">License Plate Detection & Recognition</h1>
-                <p class="lead">Upload an image containing a vehicle license plate to detect and recognize the plate number.</p>
+        
+        <!-- Loading Spinner -->
+        <div id="spinner" class="spinner" style="display: none;"></div>
+        
+        <!-- Result Container -->
+        <div id="result-container" class="result-container" style="display: none;">
+            <h2>Detection Results</h2>
+            
+            <h3>Detected License Plate</h3>
+            <div class="image-container">
+                <div class="image-box">
+                    <img id="original-image" alt="Original Image">
+                </div>
+                <div class="image-box">
+                    <img id="plate-image" alt="Plate Image">
+                </div>
+            </div>
+            
+            <div id="plate-text" class="result-text">ABC123</div>
+            
+            <div class="confidence-container">
+                <h3>Confidence Score</h3>
+                <div class="confidence-bar">
+                    <div id="confidence-level" class="confidence-level" style="width: 50%;"></div>
+                </div>
+                <div id="confidence" class="confidence-text">50.00%</div>
+            </div>
+            
+            <div class="button-container">
+                <button id="download-btn" class="btn primary-btn">Download Result</button>
+                <button id="edit-text-btn" class="btn secondary-btn">Edit Text</button>
+                <button id="new-image-btn" class="btn primary-btn">Process New Image</button>
             </div>
         </div>
         
-        <div class="upload-container">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="drop-zone" id="drop-zone">
-                        <i class="fas fa-cloud-upload-alt" id="upload-icon"></i>
-                        <h3>Drag & Drop an image here</h3>
-                        <p>or</p>
-                        <button type="button" class="btn btn-primary" id="browse-btn">Browse Files</button>
-                        <p id="file-name"></p>
-                        <input type="file" id="file-input" accept="image/*" style="display: none;">
-                    </div>
-                    <div class="error-message" id="error-message"></div>
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-md-12 text-center">
-                    <button type="button" class="btn btn-primary" id="process-btn" disabled>Process Image</button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="loader">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Processing image...</p>
-        </div>
-        
-        <div class="result-container" id="result-container">
-            <div class="row">
-                <div class="col-md-12">
-                    <h2 class="mb-4">Detection Results</h2>
-                </div>
-            </div>
-            <div class="row result-row">
-                <div class="col-md-6">
-                    <h4>Detected License Plate</h4>
-                    <div id="detected-image-container">
-                        <img id="detected-image" src="" alt="Detected License Plate">
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <h4>Extracted Plate</h4>
-                    <div id="plate-image-container">
-                        <img id="plate-image" src="" alt="License Plate">
-                    </div>
-                    <h4 class="mt-4">Recognized Text</h4>
-                    <div class="plate-text" id="plate-text"></div>
-                    <button type="button" class="btn btn-outline-primary edit-text-btn" id="edit-text-btn">
-                        <i class="fas fa-edit"></i> Edit Text
-                    </button>
-                </div>
-            </div>
-            <div class="row mt-4">
-                <div class="col-md-12">
-                    <h4>Confidence Score</h4>
-                    <div class="progress confidence-bar">
-                        <div class="progress-bar" id="confidence-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <p id="confidence-value" class="text-end mt-1"></p>
-                </div>
-            </div>
-            <div class="row mt-4">
-                <div class="col-md-12 text-center">
-                    <button type="button" class="btn btn-primary" id="download-btn">
-                        <i class="fas fa-download"></i> Download Result
-                    </button>
-                    <button type="button" class="btn btn-outline-primary ms-2" id="new-image-btn">
-                        <i class="fas fa-redo"></i> Process New Image
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row history-link">
-            <div class="col-md-12 text-center">
-                <a href="/history" class="btn btn-outline-primary">View Processing History</a>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Feedback Success Banner -->
-    <div class="alert alert-success feedback-success" id="feedback-success" style="display:none;">
-        <h5><i class="fas fa-check-circle"></i> Thank you for your feedback!</h5>
-        <p>Your feedback helps our system learn and improve. The next time we encounter a similar plate, we'll use this information to make a better prediction.</p>
-        <div class="progress mt-2 mb-2">
-            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 100%"></div>
-        </div>
-        <p class="mb-0"><small>Our model has now been updated with your feedback.</small></p>
-    </div>
-
-    <!-- Edit Text Modal -->
-    <div class="modal fade" id="editTextModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <!-- Feedback Modal -->
+        <div id="feedback-modal" class="modal" style="display: none;">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="fas fa-comment-dots"></i> License Plate Feedback</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="modal-header">
+                    <h3>License Plate Feedback</h3>
+                    <span class="close-modal">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <h6 class="text-center mb-3">Is the recognized text correct?</h6>
-                        <div class="text-center mb-4">
-                            <div class="plate-display py-2 px-4 d-inline-block border bg-warning text-dark fw-bold" style="border-radius: 5px; letter-spacing: 1px; font-size: 1.5rem;">
-                                <span id="original-text-display"></span>
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-center mb-4">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="recognitionFeedback" id="recognitionCorrect" value="correct">
-                                <label class="form-check-label" for="recognitionCorrect">
-                                    <i class="fas fa-thumbs-up text-success"></i> Yes, it's correct
-                                </label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="recognitionFeedback" id="recognitionIncorrect" value="incorrect" checked>
-                                <label class="form-check-label" for="recognitionIncorrect">
-                                    <i class="fas fa-thumbs-down text-danger"></i> No, needs correction
-                                </label>
-                            </div>
-                        </div>
-                        <div id="correction-input" class="p-3 border rounded bg-light">
-                            <label for="corrected-text" class="form-label fw-bold">What is the correct text?</label>
-                            <input type="text" class="form-control form-control-lg text-center" id="corrected-text">
-                            <div class="form-text mt-2">
-                                <i class="fas fa-info-circle"></i> Your feedback will help our AI model learn and improve. With each correction, the system gets smarter at recognizing similar plates in the future.
-                            </div>
-                        </div>
+                    <p>Is the recognized text correct?</p>
+                    <div class="recognized-text-box">
+                        <span id="modal-plate-text">ABC123</span>
+                    </div>
+                    <div class="feedback-options">
+                        <label class="radio-option">
+                            <input type="radio" name="feedback" value="correct" checked>
+                            <span>👍 Yes, it's correct</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="feedback" value="incorrect">
+                            <span>👎 No, needs correction</span>
+                        </label>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="save-text-btn">
-                        <i class="fas fa-paper-plane"></i> Submit Feedback
-                    </button>
+                    <button id="cancel-feedback" class="btn secondary-btn">Cancel</button>
+                    <button id="submit-feedback" class="btn primary-btn">Submit Feedback</button>
                 </div>
             </div>
         </div>
+        
+        <!-- Error Toast -->
+        <div id="error-toast" class="toast" style="display: none;"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const dropZone = document.getElementById('drop-zone');
+            const uploadContainer = document.getElementById('upload-container');
             const fileInput = document.getElementById('file-input');
-            const fileName = document.getElementById('file-name');
-            const processBtn = document.getElementById('process-btn');
-            const browseBtn = document.getElementById('browse-btn');
-            const loader = document.querySelector('.loader');
-            const resultContainer = document.getElementById('result-container');
-            const errorMessage = document.getElementById('error-message');
-            const detectedImage = document.getElementById('detected-image');
-            const plateImage = document.getElementById('plate-image');
-            const plateText = document.getElementById('plate-text');
-            const confidenceBar = document.getElementById('confidence-bar');
-            const confidenceValue = document.getElementById('confidence-value');
-            const downloadBtn = document.getElementById('download-btn');
+            const uploadBtn = document.getElementById('upload-btn');
             const newImageBtn = document.getElementById('new-image-btn');
             const editTextBtn = document.getElementById('edit-text-btn');
-            const editTextModal = new bootstrap.Modal(document.getElementById('editTextModal'));
-            const correctedText = document.getElementById('corrected-text');
-            const saveTextBtn = document.getElementById('save-text-btn');
-            
-            let currentResultPath = '';
-            let selectedFile = null;
-            
-            // Event listeners for drag and drop
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, false);
-            });
-            
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, highlight, false);
-            });
-            
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, unhighlight, false);
-            });
-            
-            function highlight() {
-                dropZone.classList.add('drop-zone-active');
-            }
-            
-            function unhighlight() {
-                dropZone.classList.remove('drop-zone-active');
-            }
-            
-            // Handle dropped files
-            dropZone.addEventListener('drop', handleDrop, false);
-            
-            function handleDrop(e) {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                
-                if (files.length > 0) {
-                    handleFiles(files);
-                }
-            }
-            
-            // Handle file select via browse button
-            browseBtn.addEventListener('click', () => {
+            const downloadBtn = document.getElementById('download-btn');
+            const resultContainer = document.getElementById('result-container');
+            const spinner = document.getElementById('spinner');
+            const originalImage = document.getElementById('original-image');
+            const plateImage = document.getElementById('plate-image');
+            const plateText = document.getElementById('plate-text');
+            const confidenceLevel = document.getElementById('confidence-level');
+            const confidence = document.getElementById('confidence');
+            const errorToast = document.getElementById('error-toast');
+            const feedbackModal = document.getElementById('feedback-modal');
+            const modalPlateText = document.getElementById('modal-plate-text');
+            const closeModal = document.querySelector('.close-modal');
+            const submitFeedback = document.getElementById('submit-feedback');
+            const cancelFeedback = document.getElementById('cancel-feedback');
+
+            let currentResultId = null;
+            let currentProcessedImage = null;
+
+            // Handle click on upload button
+            uploadBtn.addEventListener('click', function() {
                 fileInput.click();
             });
-            
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length > 0) {
-                    handleFiles(fileInput.files);
+
+            // Handle new image button
+            newImageBtn.addEventListener('click', function() {
+                resultContainer.style.display = 'none';
+                uploadContainer.style.display = 'block';
+            });
+
+            // Handle download button
+            downloadBtn.addEventListener('click', function() {
+                if (currentProcessedImage) {
+                    const link = document.createElement('a');
+                    link.href = currentProcessedImage;
+                    link.download = 'license_plate_detection.jpg';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                 }
             });
-            
-            function handleFiles(files) {
-                selectedFile = files[0];
+
+            // Handle edit text button
+            editTextBtn.addEventListener('click', function() {
+                const newText = prompt('Enter the correct text:', plateText.textContent);
+                if (newText && newText !== plateText.textContent) {
+                    // Send correction to server
+                    fetch('/correct', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            id: currentResultId,
+                            original: plateText.textContent,
+                            corrected: newText
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            plateText.textContent = newText;
+                            showToast('Correction saved successfully', 'success');
+                        } else {
+                            showToast('Failed to save correction', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showToast('Error: ' + error.message, 'error');
+                    });
+                }
+            });
+
+            // Handle file selection
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length > 0) {
+                    processImage(fileInput.files[0]);
+                }
+            });
+
+            // Handle drag and drop
+            uploadContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadContainer.classList.add('highlight');
+            });
+
+            uploadContainer.addEventListener('dragleave', function() {
+                uploadContainer.classList.remove('highlight');
+            });
+
+            uploadContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadContainer.classList.remove('highlight');
                 
-                // Check if file is an image
-                if (!selectedFile.type.match('image.*')) {
-                    showError('Please select an image file (JPG, PNG, etc.)');
+                if (e.dataTransfer.files.length > 0) {
+                    processImage(e.dataTransfer.files[0]);
+                }
+            });
+
+            // Process the image
+            function processImage(file) {
+                // Check file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    showToast('Please select a valid image file (JPG, JPEG, PNG)', 'error');
                     return;
                 }
+
+                // Show spinner, hide upload container
+                spinner.style.display = 'block';
+                uploadContainer.style.display = 'none';
                 
-                // Display file name
-                fileName.textContent = selectedFile.name;
-                
-                // Enable process button
-                processBtn.disabled = false;
-                
-                // Hide any previous error
-                errorMessage.style.display = 'none';
-            }
-            
-            // Process image button click handler
-            processBtn.addEventListener('click', processImage);
-            
-            function processImage() {
-                if (!selectedFile) {
-                    showError('Please select an image first.');
-                    return;
-                }
-                
-                // Hide error message if visible
-                errorMessage.style.display = 'none';
-                
-                // Show loader
-                loader.style.display = 'block';
-                
-                // Hide result container if visible
-                resultContainer.style.display = 'none';
-                
-                // Prepare form data
                 const formData = new FormData();
-                formData.append('file', selectedFile);
+                formData.append('file', file);
                 
-                // Send request to server
                 fetch('/upload', {
                     method: 'POST',
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Hide loader
-                    loader.style.display = 'none';
+                    spinner.style.display = 'none';
                     
-                    if (data.error) {
-                        showError(data.error);
-                        return;
-                    }
-                    
-                    // Show results
-                    displayResults(data);
-                })
-                .catch(error => {
-                    loader.style.display = 'none';
-                    showError('An error occurred while processing the image. Please try again.');
-                    console.error('Error:', error);
-                });
-            }
-            
-            function displayResults(data) {
-                // Set images
-                detectedImage.src = data.processed_image;
-                
-                // Use the plate_image if available, otherwise fall back to processed_image
-                if (data.plate_image) {
-                    plateImage.src = data.plate_image;
-                } else {
-                    plateImage.src = data.processed_image;
-                }
-                
-                // Set text
-                plateText.textContent = data.plate_text;
-                
-                // Set confidence
-                const confidence = data.confidence;
-                confidenceBar.style.width = confidence + '%';
-                confidenceValue.textContent = confidence.toFixed(2) + '%';
-                
-                // Set color based on confidence
-                if (confidence >= 90) {
-                    confidenceBar.className = 'progress-bar bg-success';
-                } else if (confidence >= 70) {
-                    confidenceBar.className = 'progress-bar bg-info';
-                } else if (confidence >= 50) {
-                    confidenceBar.className = 'progress-bar bg-warning';
-                } else {
-                    confidenceBar.className = 'progress-bar bg-danger';
-                }
-                
-                // Store result path for editing
-                currentResultPath = data.processed_image;
-                
-                // Show result container
-                resultContainer.style.display = 'block';
-                
-                // Scroll to results
-                resultContainer.scrollIntoView({ behavior: 'smooth' });
-                
-                // IMPORTANT FIX: Always show feedback form for the white Suzuki Swift test case
-                // or when the server explicitly asks for feedback
-                const isWhiteSuzuki = plateText.textContent.includes("HR 26") || 
-                                      plateText.textContent.includes("DEF456");
-                                      
-                if (isWhiteSuzuki || data.needs_feedback === true) {
-                    // Immediately show the feedback form without delay
-                    showFeedbackModal();
-                    return;
-                }
-                
-                // For other cases, only show feedback for low confidence
-                if (confidence < 90) {
-                    setTimeout(() => {
-                        showFeedbackModal();
-                    }, 1500);
-                }
-            }
-            
-            function showFeedbackModal() {
-                document.getElementById('original-text-display').textContent = plateText.textContent;
-                correctedText.value = plateText.textContent;
-                
-                // Show/hide correction input based on radio selection
-                document.querySelectorAll('input[name="recognitionFeedback"]').forEach(radio => {
-                    radio.addEventListener('change', function() {
-                        const correctionInput = document.getElementById('correction-input');
-                        if (this.value === 'correct') {
-                            correctionInput.style.display = 'none';
-                        } else {
-                            correctionInput.style.display = 'block';
-                        }
-                    });
-                });
-                
-                // Initialize the correction input visibility
-                const isIncorrect = document.getElementById('recognitionIncorrect').checked;
-                document.getElementById('correction-input').style.display = isIncorrect ? 'block' : 'none';
-                
-                editTextModal.show();
-            }
-            
-            function showError(message) {
-                errorMessage.textContent = message;
-                errorMessage.style.display = 'block';
-            }
-            
-            // New image button handler
-            newImageBtn.addEventListener('click', () => {
-                // Hide result container
-                resultContainer.style.display = 'none';
-                
-                // Clear file input
-                fileInput.value = '';
-                fileName.textContent = '';
-                selectedFile = null;
-                
-                // Disable process button
-                processBtn.disabled = true;
-                
-                // Scroll to top
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
-            
-            // Download result button handler
-            downloadBtn.addEventListener('click', () => {
-                const link = document.createElement('a');
-                link.href = detectedImage.src;
-                link.download = 'license_plate_detection.jpg';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            });
-            
-            // Edit text button handler
-            editTextBtn.addEventListener('click', showFeedbackModal);
-            
-            // Save text button handler
-            saveTextBtn.addEventListener('click', () => {
-                const isCorrect = document.getElementById('recognitionCorrect').checked;
-                const originalText = plateText.textContent.trim();
-                let newText = originalText;
-                
-                if (!isCorrect) {
-                    newText = correctedText.value.trim();
-                    if (newText === '') {
-                        alert('Please enter the correct text.');
-                        return;
-                    }
-                    // Update displayed text only if it was corrected
-                    plateText.textContent = newText;
-                }
-                
-                // Send feedback to server
-                fetch('/correct', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        image_path: currentResultPath,
-                        corrected_text: newText,
-                        original_text: originalText,
-                        was_correct: isCorrect
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
                     if (data.success) {
-                        // Close modal
-                        editTextModal.hide();
+                        // Store the result ID for future corrections
+                        currentResultId = data.id;
+                        currentProcessedImage = data.processed_image;
                         
-                        // Show success message
-                        const feedbackSuccess = document.getElementById('feedback-success');
-                        feedbackSuccess.style.display = 'block';
+                        // Update result container
+                        originalImage.src = data.original_image;
+                        plateImage.src = data.plate_image || data.processed_image;
+                        plateText.textContent = data.plate_text;
                         
-                        // Scroll to the feedback success message
-                        feedbackSuccess.scrollIntoView({ behavior: 'smooth' });
+                        // Update confidence
+                        const confidenceValue = data.confidence || 50;
+                        confidenceLevel.style.width = confidenceValue + '%';
+                        confidence.textContent = confidenceValue.toFixed(2) + '%';
                         
-                        // Remove feedback success after 8 seconds
+                        // Show result container
+                        resultContainer.style.display = 'block';
+                        
+                        // Show feedback modal after a short delay
                         setTimeout(() => {
-                            feedbackSuccess.style.display = 'none';
-                        }, 8000);
+                            showFeedbackModal(data.plate_text);
+                        }, 1000);
                     } else {
-                        console.error('Error saving feedback:', data.error);
-                        alert('There was an error saving your feedback. Please try again.');
+                        // Show error
+                        showToast('Error: ' + data.error, 'error');
+                        uploadContainer.style.display = 'block';
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('There was an error saving your feedback. Please try again.');
+                    spinner.style.display = 'none';
+                    uploadContainer.style.display = 'block';
+                    showToast('Error: ' + error.message, 'error');
                 });
+            }
+
+            // Show toast message
+            function showToast(message, type = 'error') {
+                errorToast.textContent = message;
+                errorToast.style.backgroundColor = type === 'error' ? '#e74c3c' : '#2ecc71';
+                errorToast.style.display = 'block';
+                
+                setTimeout(() => {
+                    errorToast.style.display = 'none';
+                }, 5000);
+            }
+
+            // Show feedback modal after processing
+            function showFeedbackModal(text) {
+                modalPlateText.textContent = text;
+                feedbackModal.style.display = 'flex';
+            }
+            
+            // Close modal events
+            closeModal.addEventListener('click', function() {
+                feedbackModal.style.display = 'none';
+            });
+            
+            cancelFeedback.addEventListener('click', function() {
+                feedbackModal.style.display = 'none';
+            });
+            
+            // Handle feedback submission
+            submitFeedback.addEventListener('click', function() {
+                const feedbackType = document.querySelector('input[name="feedback"]:checked').value;
+                const isCorrect = feedbackType === 'correct';
+                
+                if (isCorrect) {
+                    // If correct, just record that the recognition was correct
+                    fetch('/correct', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            id: currentResultId,
+                            original: modalPlateText.textContent,
+                            corrected: modalPlateText.textContent
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast('Thank you for your feedback!', 'success');
+                        } else {
+                            showToast('Failed to save feedback', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        showToast('Error: ' + error.message, 'error');
+                    });
+                } else {
+                    // If incorrect, prompt for the correct text
+                    const newText = prompt('Please enter the correct text:', modalPlateText.textContent);
+                    if (newText && newText !== modalPlateText.textContent) {
+                        fetch('/correct', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                id: currentResultId,
+                                original: modalPlateText.textContent,
+                                corrected: newText
+                            }),
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                plateText.textContent = newText;
+                                showToast('Correction saved successfully', 'success');
+                            } else {
+                                showToast('Failed to save correction', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            showToast('Error: ' + error.message, 'error');
+                        });
+                    }
+                }
+                
+                feedbackModal.style.display = 'none';
             });
         });
     </script>

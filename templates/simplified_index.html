@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>License Plate Recognition</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        
+        .upload-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            transition: background-color 0.3s;
+        }
+        
+        .upload-container.highlight {
+            background-color: #e3f2fd;
+            border-color: #2196F3;
+        }
+        
+        .upload-container p {
+            margin: 10px 0;
+            color: #666;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #0d8aee;
+        }
+        
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .preview-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        #preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            display: none;
+            margin: 0 auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-container {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .result-container h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .plate-text {
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #ffeb3b;
+            padding: 10px;
+            display: inline-block;
+            border-radius: 4px;
+            margin: 10px 0;
+            letter-spacing: 2px;
+        }
+        
+        .confidence {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #2196F3;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            color: #f44336;
+            text-align: center;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>License Plate Recognition</h1>
+        
+        <div class="upload-container" id="upload-container">
+            <p>Drag & Drop an image here or</p>
+            <input type="file" id="file-input" accept=".jpg,.jpeg,.png">
+            <button class="btn" id="select-file-btn">Select File</button>
+            <p class="small">Supported formats: JPG, JPEG, PNG</p>
+        </div>
+        
+        <div class="preview-container">
+            <img id="preview-image" alt="Preview">
+        </div>
+        
+        <div class="text-center">
+            <button class="btn" id="process-btn" disabled>Process Image</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Processing image...</p>
+        </div>
+        
+        <div class="error-message" id="error-message"></div>
+        
+        <div class="result-container" id="result-container">
+            <h3>Detected License Plate</h3>
+            <div class="plate-text" id="plate-text"></div>
+            <p class="confidence" id="confidence"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadContainer = document.getElementById('upload-container');
+            const fileInput = document.getElementById('file-input');
+            const selectFileBtn = document.getElementById('select-file-btn');
+            const previewImage = document.getElementById('preview-image');
+            const processBtn = document.getElementById('process-btn');
+            const loading = document.getElementById('loading');
+            const resultContainer = document.getElementById('result-container');
+            const plateText = document.getElementById('plate-text');
+            const confidence = document.getElementById('confidence');
+            const errorMessage = document.getElementById('error-message');
+            
+            // Handle file selection
+            selectFileBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // Handle file input change
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Handle drag and drop events
+            uploadContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadContainer.classList.add('highlight');
+            });
+            
+            uploadContainer.addEventListener('dragleave', function() {
+                uploadContainer.classList.remove('highlight');
+            });
+            
+            uploadContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadContainer.classList.remove('highlight');
+                
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelect();
+                }
+            });
+            
+            // Process button click
+            processBtn.addEventListener('click', processImage);
+            
+            function handleFileSelect() {
+                const file = fileInput.files[0];
+                
+                if (file && isValidFileType(file)) {
+                    // Show preview
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImage.src = e.target.result;
+                        previewImage.style.display = 'block';
+                        processBtn.disabled = false;
+                    };
+                    reader.readAsDataURL(file);
+                    
+                    // Reset results
+                    resultContainer.style.display = 'none';
+                    errorMessage.style.display = 'none';
+                } else if (file) {
+                    showError('Invalid file type. Please select a JPG, JPEG, or PNG image.');
+                    resetForm();
+                }
+            }
+            
+            function isValidFileType(file) {
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                return validTypes.includes(file.type);
+            }
+            
+            function processImage() {
+                const file = fileInput.files[0];
+                if (!file) return;
+                
+                // Show loading
+                loading.style.display = 'block';
+                processBtn.disabled = true;
+                errorMessage.style.display = 'none';
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Send request
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server error occurred');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading
+                    loading.style.display = 'none';
+                    
+                    // Show results
+                    plateText.textContent = data.plate_text;
+                    confidence.textContent = `Confidence: ${data.confidence}%`;
+                    resultContainer.style.display = 'block';
+                    
+                    processBtn.disabled = false;
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    showError(error.message || 'An error occurred while processing the image');
+                    processBtn.disabled = false;
+                });
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+            
+            function resetForm() {
+                fileInput.value = '';
+                previewImage.style.display = 'none';
+                processBtn.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -151,7 +151,7 @@
                             <div class="plate-images">
                                 <div class="plate-img-container">
                                     <h6>Original Image with Detection</h6>
-                                    <img src="{{ url_for('static', filename='uploads/' + entry.processed_image) }}" class="plate-img" alt="Detected License Plate">
+                                    <img src="{{ entry.processed_image if entry.processed_image.startswith('/') else url_for('static', filename=entry.processed_image) if 'processed_image' in entry else url_for('static', filename='placeholder.png') }}" class="plate-img" alt="Detected License Plate">
                                 </div>
                             </div>
                             <div class="mt-4">

@@ -28,27 +28,54 @@ logger = logging.getLogger(__name__)
 # def log_exceptions(func):
 # ...
 
-# Import necessary functions (after logging is configured)
+# --- Model Function Imports --- #
+# Import only the functions actually defined in the simplified license_plate_model.py
 try:
-    # Apply decorators to key model functions if not already done
     from license_plate_model import (
-        load_model, detect_license_plate, recognize_text,
-        get_confidence_score, handle_edit_text_feedback,
-        apply_feedback_correction, # save_feedback_data, load_feedback_data, <-- No longer imported here
-        enhance_plate_image, process_video_stream,
-        build_transfer_learning_model, train_character_recognition_model,
+        load_model,
+        detect_license_plate, # Main detection (might use TF if available)
+        detect_license_plate_cv, # OpenCV fallback detection
+        enhance_plate_image,
+        recognize_text,
+        get_confidence_score,
+        apply_feedback_correction,
+        handle_edit_text_feedback,
         preprocess_low_resolution
-        # Decorators are now defined within license_plate_model.py
-        # log_execution_time as model_log_time, # Import decorators if defined in model file
-        # log_exceptions as model_log_exc
     )
-    # No need to re-apply decorators here
-    logger.info("Successfully imported model functions")
-except Exception as e:
-    logger.critical(f"FATAL: Error importing model functions: {str(e)}")
+    MODEL_FUNCTIONS_LOADED = True
+    logger.info("Successfully imported model functions.")
+except ImportError as import_err:
+    logger.critical(f"FATAL: Error importing model functions: {import_err}")
     logger.critical(traceback.format_exc())
-    # Consider exiting if core model functions can't be imported
-    raise
+    MODEL_FUNCTIONS_LOADED = False
+    # Define dummy functions if import fails, so the app can at least start
+    def load_model(*args, **kwargs):
+        logger.error("Dummy load_model called due to import error.")
+        return {"detection": None, "recognition": None, "label_map": {}}
+    def detect_license_plate(*args, **kwargs):
+        logger.error("Dummy detect_license_plate called.")
+        return None, 0.0
+    def detect_license_plate_cv(*args, **kwargs):
+        logger.error("Dummy detect_license_plate_cv called.")
+        return None
+    def enhance_plate_image(*args, **kwargs):
+        logger.error("Dummy enhance_plate_image called.")
+        return None
+    def recognize_text(*args, **kwargs):
+        logger.error("Dummy recognize_text called.")
+        return "IMPORT_ERROR", 0.0, "import_error"
+    def get_confidence_score(*args, **kwargs):
+        logger.error("Dummy get_confidence_score called.")
+        return 0.0
+    def apply_feedback_correction(text, *args, **kwargs):
+        logger.error("Dummy apply_feedback_correction called.")
+        return text, False, {"reason": "Import Error"}
+    def handle_edit_text_feedback(*args, **kwargs):
+        logger.error("Dummy handle_edit_text_feedback called.")
+        pass
+    def preprocess_low_resolution(*args, **kwargs):
+        logger.error("Dummy preprocess_low_resolution called.")
+        return None
 
 app = Flask(__name__)
 
@@ -70,18 +97,28 @@ os.makedirs(RESULT_FOLDER, exist_ok=True)
 HISTORY_FILE = 'processing_history.json'
 FEEDBACK_FILE = 'recognition_feedback.json'
 
+# Initialize model variable
+model_data = None 
+
 try:
-    # Initialize model
-    logger.info("Loading model...")
-    model = load_model()
-    if model["detection"] is None or model["recognition"] is None:
-        raise Exception("Model files not found in 'model/' directory")
-    logger.info("Model loaded successfully")
+    logger.info("Attempting to load models...")
+    # load_model handles TF check internally
+    model_data = load_model() 
+    
+    # Check the actual status based on load_model's logic
+    if model_data.get("detection") is None and model_data.get("recognition") is None:
+         # Only log warning if TF was actually available but models failed
+         # load_model already logs if TF is missing, so just log general status here
+         logger.warning("Placeholder models or no models loaded. Using CV/Tesseract only.")
+    else:
+        logger.info("Deep Learning models appear to be loaded.")
+
 except Exception as e:
-    logger.error(f"Error loading model: {str(e)}")
-    model = None
-    logger.warning("Consider downloading model files to the 'model/' directory")
-    # Instructions to download models could be added here
+    # Catch any unexpected error during the loading process itself
+    logger.error(f"Unexpected error during model loading attempt: {str(e)}")
+    logger.error(traceback.format_exc())
+    model_data = {"detection": None, "recognition": None, "label_map": {}} # Ensure safe default
+    logger.warning("Proceeding without DL models due to loading error.")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -125,6 +162,9 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handles file uploads, processes the image, and returns results."""
+    if not MODEL_FUNCTIONS_LOADED:
+        return jsonify({'error': 'Server configuration error: Model functions failed to load.'}), 500
+
     if request.method == 'POST':
         if 'file' not in request.files:
             logger.error("Upload request missing 'file' part")
@@ -166,18 +206,64 @@ def upload_file():
 
                 # 1. Detect license plate
                 logger.debug("Detecting license plate...")
-                boxes, scores = detect_license_plate(image, model_data)
+                # Detect function should return a tuple (boxes, scores) or None
+                detection_result = detect_license_plate(image, model_data)
 
+                # --- Check detection result BEFORE unpacking --- #
+                if detection_result is None:
+                    # If TF model failed, try OpenCV fallback
+                    logger.warning("TF detection failed or returned None, trying OpenCV fallback...")
+                    cv_boxes, cv_scores = detect_license_plate_cv(image)
+                    if not cv_boxes:
+                        logger.error(f"Both TF and CV detection failed for image: {unique_filename}")
+                        # Clean up uploaded file
+                        try: os.remove(file_path)
+                        except: pass 
+                        return jsonify({'error': 'No license plate detected by either method'}), 400
+                    else:
+                        logger.info(f"Plate detected using CV fallback: {cv_boxes}")
+                        boxes = cv_boxes
+                        scores = cv_scores
+                else:
+                    # Unpack the result if it's not None
+                    boxes, scores = detection_result
+                    if not boxes:
+                        # TF detection ran but found nothing, try CV
+                        logger.warning(f"TF detector found no boxes, trying OpenCV fallback...")
+                        cv_boxes, cv_scores = detect_license_plate_cv(image)
+                        if not cv_boxes:
+                            logger.error(f"Both TF and CV detection failed (TF found no boxes): {unique_filename}")
+                            try: os.remove(file_path)
+                            except: pass
+                            return jsonify({'error': 'No license plate detected'}), 400
+                        else:
+                            logger.info(f"Plate detected using CV fallback (after TF found none): {cv_boxes}")
+                            boxes = cv_boxes
+                            scores = cv_scores
+
+                # --- Proceed with the detected boxes --- #
+                # (Ensure boxes is not empty after the checks above)
                 if not boxes:
-                    logger.warning(f"No license plate detected in image: {unique_filename}")
-                    # Optionally save the original image for review
-                    return jsonify({'error': 'No license plate detected'}), 400
+                    # This case should ideally be covered by the checks above, but as a safeguard:
+                    logger.error(f"Logic error: No boxes found after detection checks for {unique_filename}")
+                    return jsonify({'error': 'Internal server error during detection'}), 500
 
-                # For simplicity, process only the highest score detection
+                # For simplicity, process only the first detected box (highest score if TF worked)
                 best_box = boxes[0]
-                best_score = scores[0] if scores else 0.0
-                y1, x1, y2, x2 = best_box
-                logger.info(f"Plate detected with score {best_score:.2f} at box: {best_box}")
+                best_score = scores[0] if scores else 0.5 # Use 0.5 if only CV detection worked
+                
+                # Fix: Handle the case where best_box might contain arrays 
+                try:
+                    # Try the original approach first
+                    y1, x1, y2, x2 = map(int, best_box) 
+                except TypeError:
+                    # If best_box contains arrays, extract the values properly
+                    y1 = int(best_box[0]) if not isinstance(best_box[0], (list, np.ndarray)) else int(best_box[0].item())
+                    x1 = int(best_box[1]) if not isinstance(best_box[1], (list, np.ndarray)) else int(best_box[1].item())
+                    y2 = int(best_box[2]) if not isinstance(best_box[2], (list, np.ndarray)) else int(best_box[2].item())
+                    x2 = int(best_box[3]) if not isinstance(best_box[3], (list, np.ndarray)) else int(best_box[3].item())
+                
+                logger.info(f"Processing detected plate with score {best_score:.2f} at box: [{y1},{x1},{y2},{x2}]")
 
                 # Ensure box coordinates are valid before slicing
                 h, w = image.shape[:2]
@@ -201,12 +287,11 @@ def upload_file():
                 # 2. Recognize text using the improved function
                 logger.debug("Recognizing text...")
                 # recognize_text now returns (text, source)
-                plate_text, recognition_source = recognize_text(plate_img, model_data)
+                plate_text, confidence = recognize_text(plate_img)
                 plate_text = plate_text if plate_text else "Error" # Ensure not None for display
-                logger.info(f"Recognized text: '{plate_text}' (Source: {recognition_source})")
+                logger.info(f"Recognized text: '{plate_text}' (Confidence: {confidence})")
 
-                # 3. Get confidence score explicitly passing text and source
-                confidence = get_confidence_score(plate_text, recognition_source)
+                # 3. Get confidence score 
                 logger.info(f"Confidence score: {confidence:.2f}%")
 
                 # 4. Save the original image with bounding box overlay
@@ -404,18 +489,11 @@ def create_app():
     """Function to create and configure the Flask app for Waitress"""
     return app
 
+# KEEP the Flask development server __main__ block
 if __name__ == '__main__':
-    # Create required directories if they don't exist
+    # Ensure directories exist (redundant but safe)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['RESULT_FOLDER'], exist_ok=True)
-    
-    PORT = 8080  # Use standard Waitress default port
-    logger.info(f"Starting Waitress server on http://127.0.0.1:{PORT}")
-    print(f"Starting Waitress server on http://127.0.0.1:{PORT}")
-    
-    try:
-        from waitress import serve
-        serve(app, host="0.0.0.0", port=PORT, threads=4)
-    except Exception as e:
-        logger.error(f"Error starting server: {str(e)}")
-        print(f"Error starting server: {str(e)}") 
+    # Note: Use debug=True for local debugging
+    logger.info("Starting Flask development server...")
+    app.run(host='0.0.0.0', port=8080, debug=True) 
